@@ -121,9 +121,11 @@ public class QuorumPeerMain {
     protected void initializeAndRun(String[] args) throws ConfigException, IOException, AdminServerException {
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
+            //todo 解析配置
             config.parse(args[0]);
         }
-
+        //todo 启动定时清理任务
+        // 主要清理的逻辑在purgeOlderSnapshots方法，主要清除最近以及之前zxid的快照文件，不包括文件中有包含比最近的zxid版本更新的事务的文件。
         // Start and schedule the the purge task
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(
             config.getDataDir(),
@@ -131,11 +133,13 @@ public class QuorumPeerMain {
             config.getSnapRetainCount(),
             config.getPurgeInterval());
         purgeMgr.start();
-
+        //todo 当配置了多节点信息，config.isDistributed()=true
         if (args.length == 1 && config.isDistributed()) {
+            //todo 集群启动
             runFromConfig(config);
         } else {
             LOG.warn("Either no config or no quorum defined in config, running in standalone mode");
+            //todo 单机启动
             // there is only server in the quorum -- run as standalone
             ZooKeeperServerMain.main(args);
         }
@@ -143,6 +147,7 @@ public class QuorumPeerMain {
 
     public void runFromConfig(QuorumPeerConfig config) throws IOException, AdminServerException {
         try {
+            //todo 注册jmx，用于管理日志
             ManagedUtil.registerLog4jMBeans();
         } catch (JMException e) {
             LOG.warn("Unable to register log4j JMX control", e);
@@ -161,22 +166,24 @@ public class QuorumPeerMain {
             ServerMetrics.metricsProviderInitialized(metricsProvider);
             ServerCnxnFactory cnxnFactory = null;
             ServerCnxnFactory secureCnxnFactory = null;
-
+            //todo 配置客户端连接端口
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), false);
             }
-
+            //todo 配置安全连接端口
             if (config.getSecureClientPortAddress() != null) {
                 secureCnxnFactory = ServerCnxnFactory.createFactory();
                 secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(), config.getClientPortListenBacklog(), true);
             }
-
+            //todo ------------初始化当前zk服务节点的配置----------------
+            // 设置数据和快照操作
             quorumPeer = getQuorumPeer();
             quorumPeer.setTxnFactory(new FileTxnSnapLog(config.getDataLogDir(), config.getDataDir()));
             quorumPeer.enableLocalSessions(config.areLocalSessionsEnabled());
             quorumPeer.enableLocalSessionsUpgrading(config.isLocalSessionsUpgradingEnabled());
             //quorumPeer.setQuorumPeers(config.getAllMembers());
+            //todo 选举类型
             quorumPeer.setElectionType(config.getElectionAlg());
             quorumPeer.setMyid(config.getServerId());
             quorumPeer.setTickTime(config.getTickTime());
@@ -188,6 +195,7 @@ public class QuorumPeerMain {
             quorumPeer.setObserverMasterPort(config.getObserverMasterPort());
             quorumPeer.setConfigFileName(config.getConfigFilename());
             quorumPeer.setClientPortListenBacklog(config.getClientPortListenBacklog());
+            //todo 设置zk的节点数据库
             quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
             quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
             if (config.getLastSeenQuorumVerifier() != null) {
@@ -219,6 +227,7 @@ public class QuorumPeerMain {
             }
             quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
             quorumPeer.initialize();
+            //todo -------------初始化当前zk服务节点的配置---------------
 
             if (config.jvmPauseMonitorToRun) {
                 quorumPeer.setJvmPauseMonitor(new JvmPauseMonitor(config));

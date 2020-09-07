@@ -699,8 +699,10 @@ public class QuorumCnxManager {
             /*
              * Start a new connection if doesn't have one already.
              */
+            //todo 这个SEND_CAPACITY的大小是1，所以如果之前已经有一个还在等待发送，则会把之前的一个删除掉，发送新的
             BlockingQueue<ByteBuffer> bq = queueSendMap.computeIfAbsent(sid, serverId -> new CircularBlockingQueue<>(SEND_CAPACITY));
             addToSendQueue(bq, b);
+            //todo 连接集群其他机器
             connectOne(sid);
         }
     }
@@ -739,6 +741,7 @@ public class QuorumCnxManager {
      *  @param sid  server id
      */
     synchronized void connectOne(long sid) {
+        //todo 连接已建立直接返回
         if (senderWorkerMap.get(sid) != null) {
             LOG.debug("There is a connection already for server {}", sid);
             if (self.isMultiAddressEnabled() && self.isMultiAddressReachabilityCheckEnabled()) {

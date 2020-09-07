@@ -1072,19 +1072,25 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
 
     @Override
     public synchronized void start() {
+        //todo 校验serverid如果不在peer列表中，抛异常
         if (!getView().containsKey(myid)) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
+        //todo 加载zk数据库:载入之前持久化的一些信息
         loadDataBase();
+        //todo 启动连接服务端
         startServerCnxnFactory();
         try {
+            //todo 启动jetty管理服务器，默认占用8080端口，可以配置关闭
             adminServer.start();
         } catch (AdminServerException e) {
             LOG.warn("Problem starting AdminServer", e);
             System.out.println(e);
         }
+        //todo 启动之后马上进行选举，主要是创建选举必须的环境，比如：启动相关线程
         startLeaderElection();
         startJvmPauseMonitor();
+        //todo 执行选举逻辑
         super.start();
     }
 
@@ -1149,6 +1155,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     }
     public synchronized void startLeaderElection() {
         try {
+            //todo 所有节点启动的初始状态都是LOOKING，因此这里都会是创建一张投自己为Leader的票
             if (getPeerState() == ServerState.LOOKING) {
                 currentVote = new Vote(myid, getLastLoggedZxid(), getCurrentEpoch());
             }
@@ -1157,7 +1164,7 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
             re.setStackTrace(e.getStackTrace());
             throw re;
         }
-
+        //todo 初始化选举算法，electionType默认为3
         this.electionAlg = createElectionAlgorithm(electionType);
     }
 
@@ -1284,10 +1291,12 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
                 LOG.warn("Clobbering already-set QuorumCnxManager (restarting leader election?)");
                 oldQcm.halt();
             }
+            //todo 这个监听器主要就是根据配置信息创建选举地址的套接字，bind绑定监听选举端口
             QuorumCnxManager.Listener listener = qcm.listener;
             if (listener != null) {
                 listener.start();
                 FastLeaderElection fle = new FastLeaderElection(this, qcm);
+                //todo FastLeaderElection 执行start方法，其实就是启动两个线程WorkerSender、WorkerReceiver，分别用于向其他所有节点发送自己的投票信息、接收并处理其他节点发送给自己的投票信息的线程
                 fle.start();
                 le = fle;
             } else {
