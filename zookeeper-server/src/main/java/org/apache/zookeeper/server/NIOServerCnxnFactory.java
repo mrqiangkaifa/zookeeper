@@ -737,7 +737,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
             //todo 创建一个WorkerService,他是一个worker线程池，处理工作任务，里面包含若干ExecutorService，可以设置工作线程数
             workerPool = new WorkerService("NIOWorker", numWorkerThreads, false);
         }
-        //todo 挨个启动Selector线程，这是zk封装的thread，继承自Thread，封装了NIO的 Selector、SocketChannel，SelectionKey，用于完成nio网络通信
+        //todo 挨个启动Selector线程 ，这是zk封装的thread，继承自Thread，封装了NIO的 Selector、SocketChannel，SelectionKey，用于完成nio网络通信
         for (SelectorThread thread : selectorThreads) {
             if (thread.getState() == Thread.State.NEW) {
                 thread.start();
